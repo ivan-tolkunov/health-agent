@@ -115,12 +115,15 @@ The dashboard’s **Pi Coach** panel can generate an on-demand daily insight for
 - The agent uses `openai-codex/gpt-5.6-luna` and is instructed to provide a non-diagnostic, information-rich daily summary plus a medical-advice disclaimer.
 - Pi model authentication follows the local Pi installation configuration (normally `~/.pi/agent/auth.json`). If GPT-5.6 Luna is unavailable, the UI reports that configuration is needed.
 - The Pi Coach card is keyed to the selected dashboard date and its insight can be regenerated on demand. `daily_insights` keeps one row per date, overwriting the previous insight for that date; no insight history is retained.
+- The **Chat** button beside WHOOP Sync and FitBee opens an assistant-ui dialog. `POST /api/coach/chat` sends the selected day’s complete export and the in-dialog conversation to a fresh, tool-free Pi session. Chat messages are not persisted.
 
 Files:
 
 - `src/lib/coach/daily-summary.ts`
 - `src/app/api/coach/daily-summary/route.ts`
 - `src/components/daily-summary-panel.tsx`
+- `src/app/api/coach/chat/route.ts`
+- `src/components/coach-chat-dialog.tsx`
 
 ## Weight logging
 

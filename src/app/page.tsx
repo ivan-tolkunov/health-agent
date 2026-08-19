@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { CoachChatDialog } from "@/components/coach-chat-dialog";
 import { DailySummaryPanel } from "@/components/daily-summary-panel";
 import { DayNavigator } from "@/components/day-navigator";
 import { FitBeeImportDialog } from "@/components/fitbee-import-dialog";
@@ -160,6 +161,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
 								</button>
 							</form>
 						)}
+						<CoachChatDialog key={selectedDate} date={selectedDate} />
 						<FitBeeImportDialog />
 					</div>
 				</div>
