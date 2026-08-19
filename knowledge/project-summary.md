@@ -18,6 +18,8 @@ Primary goal: reduce weight from **82 kg** to **70 kg**.
 - Tailwind CSS 4
 - shadcn/ui (Radix UI components) and Lucide icons
 - Sonner for temporary notifications
+- Pi SDK (`@earendil-works/pi-coding-agent`) using `openai-codex/gpt-5.6-luna`
+- assistant-ui (`@assistant-ui/react`) for the Pi chat interface; `react-markdown` for insight rendering
 - Vitest
 - Jujutsu (`jj`) for version control
 
@@ -112,10 +114,11 @@ The dashboard’s **Pi Coach** panel can generate an on-demand daily insight for
 
 - `POST /api/coach/daily-summary` fetches every date-matched database record: WHOOP cycles, recoveries, sleeps (including naps), workouts, every FitBee import and food record, and same-day weight entries. Source payloads and FitBee source text are included for full context.
 - The complete export is passed to a fresh, tool-free Pi SDK session, so it cannot edit data and does not persist health data or chat history. The resulting latest insight is saved for its dashboard date.
-- The agent uses `openai-codex/gpt-5.6-luna` and is instructed to provide a non-diagnostic, information-rich daily summary plus a medical-advice disclaimer.
+- The agent uses `openai-codex/gpt-5.6-luna` and is instructed to provide a practical, non-diagnostic review: readiness, a push/maintain/dial-back training recommendation, and one recovery/nutrition focus. It avoids metric-by-metric recaps and ends with a medical-advice disclaimer.
 - Pi model authentication follows the local Pi installation configuration (normally `~/.pi/agent/auth.json`). If GPT-5.6 Luna is unavailable, the UI reports that configuration is needed.
 - The Pi Coach card is keyed to the selected dashboard date and its insight can be regenerated on demand. `daily_insights` keeps one row per date, overwriting the previous insight for that date; no insight history is retained.
-- The **Chat** button beside WHOOP Sync and FitBee opens an assistant-ui dialog. `POST /api/coach/chat` sends the selected day’s complete export and the in-dialog conversation to a fresh, tool-free Pi session. Chat messages are not persisted.
+- The **Chat** button beside WHOOP Sync and FitBee opens an assistant-ui `LocalRuntime` dialog and Thread UI. `POST /api/coach/chat` sends the selected day’s complete export and the in-dialog conversation to a fresh, tool-free Pi session. The route accepts only the latest 12 user/assistant messages, caps each at 4,000 characters, and chat messages are not persisted.
+- The Pi SDK is listed in `next.config.ts` `serverExternalPackages`, because its dynamic module loading cannot be bundled by Turbopack.
 
 Files:
 
@@ -124,6 +127,7 @@ Files:
 - `src/components/daily-summary-panel.tsx`
 - `src/app/api/coach/chat/route.ts`
 - `src/components/coach-chat-dialog.tsx`
+- `src/components/assistant-ui/thread.tsx` and its generated assistant-ui support components
 
 ## Weight logging
 
@@ -149,6 +153,7 @@ The user specifically requested:
 - No gradients
 - Compact mobile layout
 - Daily metrics visible without scrolling through one card at a time
+- Stable panel dimensions; long content scrolls inside the panel rather than changing dashboard layout
 - Use UI libraries before custom components
 
 Adopted component policy:
@@ -161,12 +166,24 @@ Adopted component policy:
 Current UI library setup:
 
 - `components.json`
+- assistant-ui generated Thread components in `src/components/assistant-ui/`; this generated third-party directory is intentionally ignored by ESLint while project integrations remain linted
 - `src/components/ui/button.tsx`
 - `src/components/ui/dialog.tsx`
 - `src/components/ui/input.tsx`
 - `src/components/ui/label.tsx`
 - `src/components/ui/sonner.tsx`
+- `src/components/ui/tooltip.tsx` (the root layout wraps the app in `TooltipProvider` for assistant-ui)
 - `src/lib/utils.ts`
+
+Current fixed panel heights:
+
+- Nutrition: 360px
+- Workouts: 300px
+- Pi daily insight: 400px
+
+Each panel’s list/insight area scrolls internally. The Insight action is a minimal top-right text/icon control; insight generation blurs current content and shows a spinner.
+
+WHOOP’s official Developer API has no steps endpoint or OAuth scope. Steps remain sourced from FitBee unless another provider is integrated.
 
 ## PGlite operational note
 
@@ -187,13 +204,16 @@ pnpm build
 
 jj status
 jj diff
-jj commit -m "message"
+jj describe -m "message"
+jj new
+
+# Existing recent focused commits include assistant-ui chat components and Pi Coach chat dialog.
 ```
 
 ## Validation completed most recently
 
-- PGlite `weight_entries` table exists
-- Dashboard and weight-dialog trigger respond
+- PGlite `weight_entries` and `daily_insights` tables exist
+- Dashboard, weight dialog, daily insight persistence, and Pi chat endpoint respond
 - ESLint passes
 - TypeScript passes
 - Vitest passes
@@ -205,5 +225,5 @@ jj commit -m "message"
 1. Improve/finish shadcn migration for existing FitBee dialog and other handcrafted controls.
 2. Weight history chart and trend analysis.
 3. Weekly/monthly views and correlations: recovery, sleep, training, intake, energy balance, and weight.
-4. Expand Pi Coach with read-only health-data tools and chat.
+4. Expand Pi Coach with cross-day/weekly read-only data tools and optional chat persistence.
 5. Authentication for home-server access and deployment configuration (reverse proxy, HTTPS, backups).

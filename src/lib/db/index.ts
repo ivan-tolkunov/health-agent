@@ -40,6 +40,12 @@ async function initializeDatabase(): Promise<void> {
       generated_at timestamptz NOT NULL DEFAULT now()
     );
 
+    CREATE TABLE IF NOT EXISTS coach_chats (
+      date date PRIMARY KEY,
+      messages jsonb NOT NULL,
+      updated_at timestamptz NOT NULL DEFAULT now()
+    );
+
     CREATE TABLE IF NOT EXISTS weight_entries (
       id text PRIMARY KEY,
       measured_date date NOT NULL,

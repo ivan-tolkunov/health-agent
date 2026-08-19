@@ -35,6 +35,16 @@ export const dailyInsights = pgTable("daily_insights", {
 		.defaultNow(),
 });
 
+export const coachChats = pgTable("coach_chats", {
+	date: date("date", { mode: "string" }).primaryKey(),
+	messages: jsonb("messages")
+		.$type<Array<{ role: "user" | "assistant"; content: string }>>()
+		.notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true })
+		.notNull()
+		.defaultNow(),
+});
+
 export const nutritionImports = pgTable("nutrition_imports", {
 	id: text("id").primaryKey(),
 	reportDate: date("report_date", { mode: "string" }).notNull(),

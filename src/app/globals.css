@@ -316,6 +316,36 @@ h2 {
   background: #f8f9f7;
 }
 
+.coach-chat-trigger {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 40;
+  display: inline-flex;
+  width: 46px;
+  height: 46px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #3f4642;
+  border-radius: 50%;
+  background: #17201b;
+  color: white;
+  box-shadow: 0 6px 18px rgb(16 28 20 / 24%);
+  cursor: pointer;
+  transition: background 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.coach-chat-trigger:hover {
+  background: #2b3730;
+  box-shadow: 0 9px 24px rgb(16 28 20 / 30%);
+  transform: translateY(-2px);
+}
+
+.coach-chat-trigger:focus-visible {
+  outline: 2px solid #49a96d;
+  outline-offset: 3px;
+}
+
 .button {
   display: inline-flex;
   min-height: 36px;
@@ -468,10 +498,20 @@ h2 {
   padding: 24px;
 }
 
-.nutrition-panel,
-.activity-panel,
-.coach-panel {
+.nutrition-panel {
   height: 360px;
+  display: flex;
+  flex-direction: column;
+}
+
+.activity-panel {
+  height: 300px;
+  display: flex;
+  flex-direction: column;
+}
+
+.coach-panel {
+  height: 400px;
   display: flex;
   flex-direction: column;
 }
