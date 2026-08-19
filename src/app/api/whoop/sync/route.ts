@@ -1,12 +1,13 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
+import { appUrl } from "@/lib/app-url";
 import { syncWhoop } from "@/lib/whoop/client";
 
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
-	const destination = new URL("/", request.url);
+	const destination = appUrl(request);
 
 	try {
 		const result = await syncWhoop(90);
