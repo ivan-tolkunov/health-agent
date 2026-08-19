@@ -1,16 +1,19 @@
-import { desc, eq } from "drizzle-orm";
+import type { ReactNode } from "react";
 
+import { DailySummaryPanel } from "@/components/daily-summary-panel";
+import { DayNavigator } from "@/components/day-navigator";
 import { FitBeeImportDialog } from "@/components/fitbee-import-dialog";
+import { LogWeightDialog } from "@/components/log-weight-dialog";
 import { NutritionPanel } from "@/components/nutrition-panel";
-import { db, ensureDatabase } from "@/lib/db";
+import { StatusToast } from "@/components/status-toast";
+import { getDailyInsight } from "@/lib/coach/insights";
+import { ensureDatabase } from "@/lib/db";
 import {
-	nutritionFoods,
-	nutritionImports,
-	whoopCycles,
-	whoopRecoveries,
-	whoopSleeps,
-	whoopWorkouts,
-} from "@/lib/db/schema";
+	getCalorieProgress,
+	getDashboardDay,
+	getLatestWeight,
+} from "@/lib/dashboard/day";
+import { selectedDashboardDate, torontoToday } from "@/lib/dashboard/date";
 import { isWhoopConnected } from "@/lib/whoop/client";
 
 export const runtime = "nodejs";
@@ -40,15 +43,18 @@ function MetricCard({
 	value,
 	detail,
 	accent,
+	action,
 }: {
 	label: string;
 	value: string;
 	detail: string;
 	accent: string;
+	action?: ReactNode;
 }) {
 	return (
 		<article className="metric-card">
 			<div className="metric-accent" style={{ backgroundColor: accent }} />
+			{action ? <div className="metric-action">{action}</div> : null}
 			<p className="metric-label">{label}</p>
 			<p className="metric-value">{value}</p>
 			<p className="metric-detail">{detail}</p>
@@ -59,92 +65,117 @@ function MetricCard({
 export default async function Home({ searchParams }: PageProps<"/">) {
 	await ensureDatabase();
 	const params = await searchParams;
-	const [
-		connected,
-		latestCycles,
-		latestRecoveries,
-		latestSleeps,
-		workouts,
-		latestNutrition,
-	] = await Promise.all([
-		isWhoopConnected(),
-		db.select().from(whoopCycles).orderBy(desc(whoopCycles.start)).limit(1),
-		db
-			.select()
-			.from(whoopRecoveries)
-			.orderBy(desc(whoopRecoveries.sourceUpdatedAt))
-			.limit(1),
-		db.select().from(whoopSleeps).orderBy(desc(whoopSleeps.start)).limit(1),
-		db.select().from(whoopWorkouts).orderBy(desc(whoopWorkouts.start)).limit(3),
-		db
-			.select()
-			.from(nutritionImports)
-			.orderBy(
-				desc(nutritionImports.reportDate),
-				desc(nutritionImports.importedAt),
-			)
-			.limit(1),
-	]);
-
-	const nutrition = latestNutrition[0];
-	const foods = nutrition
-		? await db
-				.select()
-				.from(nutritionFoods)
-				.where(eq(nutritionFoods.importId, nutrition.id))
-				.orderBy(nutritionFoods.meal, nutritionFoods.position)
-		: [];
-	const cycle = latestCycles[0];
-	const recovery = latestRecoveries[0];
-	const sleep = latestSleeps[0];
+	const today = torontoToday();
+	const selectedDate = selectedDashboardDate(params.date);
+	const [connected, day, calorieProgress, latestWeight, dailyInsight] =
+		await Promise.all([
+			isWhoopConnected(),
+			getDashboardDay(selectedDate),
+			getCalorieProgress(),
+			getLatestWeight(),
+			getDailyInsight(selectedDate),
+		]);
+	const { cycle, recovery, sleep, workouts, nutrition, foods, weight } = day;
+	const currentWeight = latestWeight?.weightKg ?? 82;
+	const selectedWeight = weight?.weightKg ?? currentWeight;
+	const kilogramsToGoal = Math.max(selectedWeight - 70, 0);
 	const sleepDuration = sleep
 		? (sleep.totalLightSleepTimeMilli ?? 0) +
 			(sleep.totalSlowWaveSleepTimeMilli ?? 0) +
 			(sleep.totalRemSleepTimeMilli ?? 0)
 		: null;
 	const status = typeof params.whoop === "string" ? params.whoop : undefined;
+	const statusNotification =
+		status && statusMessages[status]
+			? `${statusMessages[status]}${params.records ? ` ${params.records} records processed.` : ""}`
+			: undefined;
 
 	return (
 		<main className="app-shell">
-			<header className="topbar">
-				<div>
-					<p className="eyebrow">PERSONAL HEALTH</p>
-					<h1>Good morning</h1>
-					<p className="muted">Toronto · Goal 70 kg · Current baseline 82 kg</p>
+			<header className="health-hero">
+				<div className="hero-topline">
+					<div className="hero-brand">
+						<strong>Health Agent</strong>
+						<span>Private dashboard · Toronto</span>
+					</div>
+					<div className={`source-pill ${connected ? "live" : ""}`}>
+						<span className="status-dot" />
+						{connected ? "WHOOP LIVE" : "WHOOP OFFLINE"}
+					</div>
 				</div>
-				<div className="connection-actions">
-					<span className={`status-dot ${connected ? "connected" : ""}`} />
-					<span>{connected ? "WHOOP connected" : "WHOOP not connected"}</span>
-					{connected ? (
-						<form action="/api/whoop/sync" method="post">
-							<button className="button secondary" type="submit">
-								Sync 90 days
-							</button>
-						</form>
-					) : (
-						<form action="/api/whoop/connect" method="get">
-							<button className="button" type="submit">
-								Connect WHOOP
-							</button>
-						</form>
-					)}
-					<FitBeeImportDialog />
+
+				<div className="hero-main">
+					<div className="hero-goal">
+						<p>Good morning</p>
+						<h1>
+							{Math.max(currentWeight - 70, 0).toFixed(1)} kg to your goal
+						</h1>
+						<div className="goal-route">
+							<strong>{currentWeight.toFixed(1)} kg</strong>
+							<span aria-hidden="true" />
+							<strong>70 kg</strong>
+						</div>
+					</div>
+
+					<div
+						className={`hero-calorie-bank ${calorieProgress.caloriesSaved < 0 ? "over" : ""}`}
+					>
+						<span>CALORIE BANK</span>
+						{calorieProgress.trackedDays ? (
+							<>
+								<strong>
+									{calorieProgress.caloriesSaved >= 0 ? "+" : "−"}
+									{Math.abs(calorieProgress.caloriesSaved).toLocaleString(
+										"en-CA",
+									)}
+								</strong>
+								<small>
+									kcal {calorieProgress.caloriesSaved >= 0 ? "saved" : "over"} ·{" "}
+									{calorieProgress.trackedDays}{" "}
+									{calorieProgress.trackedDays === 1 ? "day" : "days"}
+								</small>
+							</>
+						) : (
+							<>
+								<strong>—</strong>
+								<small>Import FitBee to begin</small>
+							</>
+						)}
+					</div>
+				</div>
+
+				<div className="hero-actions">
+					<span>Latest {currentWeight.toFixed(1)} kg · Target 70 kg</span>
+					<div>
+						{connected ? (
+							<form action="/api/whoop/sync" method="post">
+								<button className="button secondary" type="submit">
+									Sync
+								</button>
+							</form>
+						) : (
+							<form action="/api/whoop/connect" method="get">
+								<button className="button" type="submit">
+									Connect WHOOP
+								</button>
+							</form>
+						)}
+						<FitBeeImportDialog />
+					</div>
 				</div>
 			</header>
 
-			{status && statusMessages[status] ? (
-				<div className="notice" role="status">
-					{statusMessages[status]}
-					{params.records ? ` ${params.records} records processed.` : ""}
-				</div>
+			{statusNotification ? (
+				<StatusToast
+					message={statusNotification}
+					variant={
+						status === "connected" || status === "synced" ? "success" : "error"
+					}
+				/>
 			) : null}
 
-			<section className="section-heading">
-				<div>
-					<p className="eyebrow">TODAY</p>
-					<h2>Your daily overview</h2>
-				</div>
-				<p className="muted">Data appears after your first WHOOP sync.</p>
+			<section className="section-heading day-heading">
+				<DayNavigator date={selectedDate} today={today} />
 			</section>
 
 			<section className="metric-grid">
@@ -181,10 +212,20 @@ export default async function Home({ searchParams }: PageProps<"/">) {
 					accent="#f4a340"
 				/>
 				<MetricCard
-					label="Energy burned"
-					value={calories(cycle?.kilojoule ?? null)}
-					detail="kcal from WHOOP"
-					accent="#ec665f"
+					label="Weight"
+					value={`${selectedWeight.toFixed(1)} kg`}
+					detail={
+						weight?.measuredDate === selectedDate
+							? "Logged this day"
+							: `${kilogramsToGoal.toFixed(1)} kg to goal`
+					}
+					accent="#d288e8"
+					action={
+						<LogWeightDialog
+							date={selectedDate}
+							currentWeight={selectedWeight}
+						/>
+					}
 				/>
 				<MetricCard
 					label="Nutrition"
@@ -201,18 +242,18 @@ export default async function Home({ searchParams }: PageProps<"/">) {
 					accent="#49a9d8"
 				/>
 				<MetricCard
-					label="Weight"
-					value="82 kg"
-					detail="12 kg to goal"
-					accent="#d288e8"
+					label="Energy burned"
+					value={calories(cycle?.kilojoule ?? null)}
+					detail="kcal from WHOOP"
+					accent="#ec665f"
 				/>
 			</section>
 
 			<section className="panel-grid">
 				<NutritionPanel nutrition={nutrition} foods={foods} />
-				<article className="panel">
-					<p className="eyebrow">LATEST ACTIVITY</p>
-					<h2>Recent workouts</h2>
+				<article className="panel activity-panel">
+					<p className="eyebrow">ACTIVITY</p>
+					<h2>Workouts</h2>
 					{workouts.length ? (
 						<ul className="workout-list">
 							{workouts.map((workout) => (
@@ -222,8 +263,8 @@ export default async function Home({ searchParams }: PageProps<"/">) {
 										<span>
 											{new Intl.DateTimeFormat("en-CA", {
 												timeZone: "America/Toronto",
-												month: "short",
-												day: "numeric",
+												hour: "numeric",
+												minute: "2-digit",
 											}).format(workout.start)}
 										</span>
 									</div>
@@ -236,17 +277,11 @@ export default async function Home({ searchParams }: PageProps<"/">) {
 					)}
 				</article>
 
-				<article className="panel coach-panel">
-					<p className="eyebrow">AI COACH</p>
-					<h2>Daily insight</h2>
-					<p className="empty-state">
-						Once WHOOP and nutrition data are available, Pi will summarize your
-						day and answer questions using read-only tools.
-					</p>
-					<button className="button secondary" disabled>
-						Chat coming next
-					</button>
-				</article>
+				<DailySummaryPanel
+					key={selectedDate}
+					date={selectedDate}
+					initialSummary={dailyInsight?.summary}
+				/>
 			</section>
 		</main>
 	);
