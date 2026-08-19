@@ -18,6 +18,23 @@ const auditColumns = {
 	raw: jsonb("raw").notNull(),
 };
 
+export const weightEntries = pgTable("weight_entries", {
+	id: text("id").primaryKey(),
+	measuredDate: date("measured_date", { mode: "string" }).notNull(),
+	weightKg: real("weight_kg").notNull(),
+	measuredAt: timestamp("measured_at", { withTimezone: true })
+		.notNull()
+		.defaultNow(),
+});
+
+export const dailyInsights = pgTable("daily_insights", {
+	date: date("date", { mode: "string" }).primaryKey(),
+	summary: text("summary").notNull(),
+	generatedAt: timestamp("generated_at", { withTimezone: true })
+		.notNull()
+		.defaultNow(),
+});
+
 export const nutritionImports = pgTable("nutrition_imports", {
 	id: text("id").primaryKey(),
 	reportDate: date("report_date", { mode: "string" }).notNull(),

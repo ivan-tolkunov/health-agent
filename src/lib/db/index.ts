@@ -6,7 +6,10 @@ import { drizzle } from "drizzle-orm/pglite";
 
 import * as schema from "./schema";
 
-const dataDirectory = process.env.PGLITE_DATA_DIR ?? "./storage/pglite";
+const dataDirectory =
+	process.env.NEXT_PHASE === "phase-production-build"
+		? "memory://"
+		: (process.env.PGLITE_DATA_DIR ?? "./storage/pglite");
 if (!dataDirectory.includes("://")) {
 	mkdirSync(dirname(dataDirectory), { recursive: true });
 }
@@ -31,6 +34,22 @@ export function ensureDatabase(): Promise<void> {
 
 async function initializeDatabase(): Promise<void> {
 	await client.exec(`
+    CREATE TABLE IF NOT EXISTS daily_insights (
+      date date PRIMARY KEY,
+      summary text NOT NULL,
+      generated_at timestamptz NOT NULL DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS weight_entries (
+      id text PRIMARY KEY,
+      measured_date date NOT NULL,
+      weight_kg real NOT NULL,
+      measured_at timestamptz NOT NULL DEFAULT now()
+    );
+
+    CREATE INDEX IF NOT EXISTS weight_entries_date_idx
+      ON weight_entries (measured_date DESC, measured_at DESC);
+
     CREATE TABLE IF NOT EXISTS nutrition_imports (
       id text PRIMARY KEY,
       report_date date NOT NULL,
