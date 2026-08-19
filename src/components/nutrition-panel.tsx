@@ -23,7 +23,7 @@ export function NutritionPanel({
 }) {
 	if (!nutrition) {
 		return (
-			<article className="panel">
+			<article className="panel nutrition-panel">
 				<p className="eyebrow">FITBEE</p>
 				<h2>Nutrition</h2>
 				<p className="empty-state">

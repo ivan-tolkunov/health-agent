@@ -11,6 +11,7 @@ import { FitBeeParseError, parseFitBeeText } from "@/lib/fitbee/parser";
 export type FitBeeImportState = {
 	status: "idle" | "error" | "success";
 	message: string;
+	reportDate?: string;
 };
 
 export async function importFitBeeText(
@@ -72,5 +73,6 @@ export async function importFitBeeText(
 	return {
 		status: "success",
 		message: `Imported ${report.calories} kcal and ${report.foods.length} foods for ${report.reportDate}.`,
+		reportDate: report.reportDate,
 	};
 }

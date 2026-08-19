@@ -17,7 +17,7 @@ const MEAL_NAMES = new Set(["BREAKFAST", "LUNCH", "DINNER", "SNACKS"]);
 const NUTRIENTS =
 	/^([\d\s.,]+)\s*cal\s*\|\s*([\d.,]+)g\s+protein\s*\|\s*([\d.,]+)g\s+carbs\s*\|\s*([\d.,]+)g\s+fat$/i;
 
-export type FitBeeFood = {
+type FitBeeFood = {
 	meal: string;
 	position: number;
 	description: string;
