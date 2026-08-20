@@ -297,8 +297,14 @@ h2 {
   font-size: 0.66rem;
 }
 
-.hero-actions > div {
+.hero-actions > div,
+.sync-actions {
   gap: 7px;
+}
+
+.sync-actions {
+  display: flex;
+  align-items: center;
 }
 
 .hero-actions .button {

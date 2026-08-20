@@ -8,7 +8,7 @@ Private, mobile-friendly health dashboard for WHOOP, FitBee nutrition exports, w
 - Persistent embedded Postgres through PGlite
 - WHOOP OAuth 2.0 connection
 - Encrypted WHOOP access and refresh tokens
-- 90-day WHOOP cycle, recovery, sleep, and workout sync
+- WHOOP cycle, recovery, sleep, and workout sync for either the last 24 hours or 90 days, with same-record replacement
 - Toronto-local display dates
 - Paste-based FitBee text imports with calories, macros, meals, and foods
 - Immutable nutrition snapshots for repeated same-day imports
@@ -58,7 +58,7 @@ Weight logging, trends, and Pi chat are the next milestones.
    pnpm dev
    ```
 
-7. Open <http://localhost:3000>, select **Connect WHOOP**, authorize access, and run **Sync 90 days**.
+7. Open <http://localhost:3000>, select **Connect WHOOP**, and authorize access. Use **Sync 90 days** for the initial import, then **Sync 24h** for routine refreshes. Both options replace matching WHOOP records with their latest values.
 
 ## Private data
 

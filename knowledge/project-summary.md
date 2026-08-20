@@ -39,7 +39,7 @@ Routes:
 
 - `GET /api/whoop/connect` starts OAuth
 - `GET /api/whoop/callback` exchanges the authorization code
-- `POST /api/whoop/sync` imports 90 days
+- `POST /api/whoop/sync` accepts a `range` form value of `24h` or `90d` and upserts matching records
 
 Requested scopes:
 
@@ -56,7 +56,7 @@ WHOOP API rate limits provided by the user:
 - 10,000 requests/day
 - 100 requests/minute
 
-The sync paginates WHOOP collections and imports cycles, recoveries, sleeps, workouts, and profile. It has been successfully connected and synced.
+The sync paginates WHOOP collections over either a rolling 24-hour or 90-day window and imports cycles, recoveries, sleeps, workouts, and profile. Existing records are replaced through primary-key upserts. Use 90 days for the initial import and 24 hours to refresh in-progress current-day scores.
 
 Important OAuth configuration:
 

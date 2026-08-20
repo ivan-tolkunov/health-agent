@@ -22,7 +22,8 @@ export const dynamic = "force-dynamic";
 
 const statusMessages: Record<string, string> = {
 	connected: "WHOOP connected. Run the first sync to import your data.",
-	synced: "WHOOP data synchronized successfully.",
+	synced_24h: "WHOOP data from the last 24 hours synchronized successfully.",
+	synced_90d: "WHOOP data from the last 90 days synchronized successfully.",
 	invalid_oauth_response:
 		"WHOOP rejected the OAuth response. Please try again.",
 	connection_failed: "WHOOP connection failed. Check the server log.",
@@ -149,9 +150,26 @@ export default async function Home({ searchParams }: PageProps<"/">) {
 					<span>Latest {currentWeight.toFixed(1)} kg · Target 70 kg</span>
 					<div>
 						{connected ? (
-							<form action="/api/whoop/sync" method="post">
-								<button className="button secondary" type="submit">
-									Sync
+							<form
+								action="/api/whoop/sync"
+								className="sync-actions"
+								method="post"
+							>
+								<button
+									className="button secondary"
+									name="range"
+									type="submit"
+									value="24h"
+								>
+									Sync 24h
+								</button>
+								<button
+									className="button secondary"
+									name="range"
+									type="submit"
+									value="90d"
+								>
+									Sync 90 days
 								</button>
 							</form>
 						) : (
@@ -171,7 +189,9 @@ export default async function Home({ searchParams }: PageProps<"/">) {
 				<StatusToast
 					message={statusNotification}
 					variant={
-						status === "connected" || status === "synced" ? "success" : "error"
+						status === "connected" || status?.startsWith("synced_")
+							? "success"
+							: "error"
 					}
 				/>
 			) : null}

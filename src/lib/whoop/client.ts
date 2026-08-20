@@ -178,10 +178,10 @@ async function fetchCollection<T extends z.ZodType>(
 	return records;
 }
 
-export async function syncWhoop(historyDays = 90) {
+export async function syncWhoop(historyHours = 24) {
 	await ensureDatabase();
 	const start = new Date(
-		Date.now() - historyDays * 24 * 60 * 60 * 1_000,
+		Date.now() - historyHours * 60 * 60 * 1_000,
 	).toISOString();
 
 	const [profile, cycles, recoveries, sleeps, workouts] = await Promise.all([
