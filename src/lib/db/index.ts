@@ -20,10 +20,7 @@ const globalForDatabase = globalThis as unknown as {
 };
 
 const client = globalForDatabase.pglite ?? new PGlite(dataDirectory);
-
-if (process.env.NODE_ENV !== "production") {
-	globalForDatabase.pglite = client;
-}
+globalForDatabase.pglite = client;
 
 export const db = drizzle(client, { schema });
 
