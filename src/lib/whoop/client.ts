@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, gte, inArray, notInArray } from "drizzle-orm";
 import type { z } from "zod";
 
 import { db, ensureDatabase } from "@/lib/db";
@@ -199,6 +199,12 @@ export async function syncWhoop(historyHours = 24) {
 		upsertSleeps(sleeps),
 		upsertWorkouts(workouts),
 	]);
+	await removeDeletedRecords(new Date(start), {
+		cycles,
+		recoveries,
+		sleeps,
+		workouts,
+	});
 
 	return {
 		cycles: cycles.length,
@@ -206,6 +212,68 @@ export async function syncWhoop(historyHours = 24) {
 		sleeps: sleeps.length,
 		workouts: workouts.length,
 	};
+}
+
+async function removeDeletedRecords(
+	start: Date,
+	records: {
+		cycles: z.infer<typeof cycleSchema>[];
+		recoveries: z.infer<typeof recoverySchema>[];
+		sleeps: z.infer<typeof sleepSchema>[];
+		workouts: z.infer<typeof workoutSchema>[];
+	},
+) {
+	const recoveryCycleIds = records.recoveries.map((record) => record.cycle_id);
+	const cycleIdsInRange = db
+		.select({ id: whoopCycles.id })
+		.from(whoopCycles)
+		.where(gte(whoopCycles.start, start));
+
+	// WHOOP collection responses are authoritative for the requested window.
+	// Remove local rows that WHOOP no longer returns after an activity is deleted.
+	await db
+		.delete(whoopRecoveries)
+		.where(
+			and(
+				inArray(whoopRecoveries.cycleId, cycleIdsInRange),
+				recoveryCycleIds.length
+					? notInArray(whoopRecoveries.cycleId, recoveryCycleIds)
+					: undefined,
+			),
+		);
+
+	const cycleIds = records.cycles.map((record) => record.id);
+	const sleepIds = records.sleeps.map((record) => record.id);
+	const workoutIds = records.workouts.map((record) => record.id);
+
+	await Promise.all([
+		db
+			.delete(whoopCycles)
+			.where(
+				and(
+					gte(whoopCycles.start, start),
+					cycleIds.length ? notInArray(whoopCycles.id, cycleIds) : undefined,
+				),
+			),
+		db
+			.delete(whoopSleeps)
+			.where(
+				and(
+					gte(whoopSleeps.start, start),
+					sleepIds.length ? notInArray(whoopSleeps.id, sleepIds) : undefined,
+				),
+			),
+		db
+			.delete(whoopWorkouts)
+			.where(
+				and(
+					gte(whoopWorkouts.start, start),
+					workoutIds.length
+						? notInArray(whoopWorkouts.id, workoutIds)
+						: undefined,
+				),
+			),
+	]);
 }
 
 async function upsertProfile(profile: z.infer<typeof profileSchema>) {
