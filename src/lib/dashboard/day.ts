@@ -70,13 +70,20 @@ export async function getLatestWeight() {
 
 export async function getCoachDayData(date: string) {
 	const selectedDate = sql`CAST(${date} AS date)`;
+	const cycleIdsForDay = db
+		.select({ id: whoopSleeps.cycleId })
+		.from(whoopSleeps)
+		.where(
+			and(
+				eq(whoopSleeps.nap, false),
+				sql`DATE(${whoopSleeps.end} AT TIME ZONE 'America/Toronto') = ${selectedDate}`,
+			),
+		);
 	const [cycles, sleeps, workouts, imports, weights] = await Promise.all([
 		db
 			.select()
 			.from(whoopCycles)
-			.where(
-				sql`DATE(${whoopCycles.start} AT TIME ZONE 'America/Toronto') = ${selectedDate}`,
-			)
+			.where(inArray(whoopCycles.id, cycleIdsForDay))
 			.orderBy(desc(whoopCycles.start)),
 		db
 			.select()
@@ -146,14 +153,21 @@ export async function getCoachDayData(date: string) {
 
 export async function getDashboardDay(date: string) {
 	const selectedDate = sql`CAST(${date} AS date)`;
+	const cycleIdsForDay = db
+		.select({ id: whoopSleeps.cycleId })
+		.from(whoopSleeps)
+		.where(
+			and(
+				eq(whoopSleeps.nap, false),
+				sql`DATE(${whoopSleeps.end} AT TIME ZONE 'America/Toronto') = ${selectedDate}`,
+			),
+		);
 	const [cycles, sleeps, workouts, nutritionImportsForDay, weights] =
 		await Promise.all([
 			db
 				.select()
 				.from(whoopCycles)
-				.where(
-					sql`DATE(${whoopCycles.start} AT TIME ZONE 'America/Toronto') = ${selectedDate}`,
-				)
+				.where(inArray(whoopCycles.id, cycleIdsForDay))
 				.orderBy(desc(whoopCycles.start))
 				.limit(1),
 			db
