@@ -75,7 +75,7 @@ export async function getCoachDayData(date: string) {
 			.select()
 			.from(whoopCycles)
 			.where(
-				sql`DATE(COALESCE(${whoopCycles.end}, ${whoopCycles.start} + interval '1 day') AT TIME ZONE 'America/Toronto') = ${selectedDate}`,
+				sql`DATE(${whoopCycles.start} AT TIME ZONE 'America/Toronto') = ${selectedDate}`,
 			)
 			.orderBy(desc(whoopCycles.start)),
 		db
@@ -152,7 +152,7 @@ export async function getDashboardDay(date: string) {
 				.select()
 				.from(whoopCycles)
 				.where(
-					sql`DATE(COALESCE(${whoopCycles.end}, ${whoopCycles.start} + interval '1 day') AT TIME ZONE 'America/Toronto') = ${selectedDate}`,
+					sql`DATE(${whoopCycles.start} AT TIME ZONE 'America/Toronto') = ${selectedDate}`,
 				)
 				.orderBy(desc(whoopCycles.start))
 				.limit(1),
